@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Black-Box Experiment Station</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #f8fafc; --panel: #ffffff; --accent: #1e40af; --text: #0f172a; --danger: #ef4444; --v-trace: #00ff00; --i-trace: #00d4ff; --success: #059669; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .lab-bench { background: var(--panel); padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); max-width: 1200px; width: 100%; border: 1px solid #e2e8f0; }
+        
+        .header-section { text-align: center; margin-bottom: 25px; border-bottom: 3px double #cbd5e1; padding-bottom: 15px; }
+        .header-section h1 { margin: 0; color: var(--accent); font-size: 1.6em; text-transform: uppercase; }
+        .faculty-info { margin-top: 8px; font-weight: 600; color: #475569; font-size: 0.9em; }
+
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .tab-btn { padding: 10px 20px; border: none; background: #f1f5f9; cursor: pointer; font-weight: 600; color: #64748b; border-radius: 8px 8px 0 0; transition: 0.2s; }
+        .tab-btn:hover { background: #e2e8f0; }
+        .tab-btn.active { background: var(--accent); color: white; }
+
+        .visual-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .canvas-box { border: 2px solid #e2e8f0; border-radius: 12px; background: #fff; height: 250px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .canvas-label { position: absolute; top: 8px; left: 10px; font-size: 9px; letter-spacing: 1px; font-weight: 800; color: #94a3b8; z-index: 10; text-transform: uppercase; }
+        
+        .control-panel { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-bottom: 20px; }
+        .metric { font-size: 1em; font-family: monospace; background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        
+        .graph-area { background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px; height: 350px; margin-bottom: 20px; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .info-card { background: #f1f5f9; padding: 15px; border-radius: 12px; font-size: 0.9em; border: 1px solid #e2e8f0; }
+        .info-card h3 { margin-top: 0; color: var(--accent); font-size: 1.1em; border-bottom: 1px solid #cbd5e1; margin-bottom: 10px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; background: white; }
+        th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: center; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 0.9em; }
+        .btn-record { background: var(--success); color: white; width: 100%; margin-top: 10px; }
+        .btn-result { background: var(--accent); color: white; }
+        .btn-print { background: #7c3aed; color: white; }
+        .btn-export { background: #475569; color: white; }
+        .btn-reset { background: var(--danger); color: white; }
+        
+        #resultDisplay { margin-top: 15px; padding: 15px; border-radius: 8px; background: #ecfdf5; border: 1px solid #10b981; display: none; color: #065f46; font-weight: bold; }
+
+        .cert-block { margin-top: 40px; padding: 20px; border: 2px solid #cbd5e1; border-radius: 12px; display: none; }
+        .cert-header { text-align: center; font-weight: bold; text-decoration: underline; margin-bottom: 20px; }
+        .cert-row { display: flex; justify-content: space-between; margin-top: 30px; }
+        .sign-line { border-top: 1px solid black; width: 200px; text-align: center; padding-top: 5px; font-size: 0.9em; }
+
+        @media print {
+            body { padding: 0; background: white; }
+            .tabs, .control-panel, .btn-group, .canvas-label, input { display: none !important; }
+            .lab-bench { box-shadow: none; border: none; width: 100%; max-width: 100%; }
+            .visual-grid { grid-template-columns: 1fr 1fr; }
+            .canvas-box { height: 200px; border: 1px solid #ccc; }
+            .cert-block { display: block !important; }
+            #resultDisplay { border: none; background: none; padding: 0; display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="lab-bench" id="printableArea">
+    <div class="header-section">
+        <h1>Black-Box Experiment (Identification of basic Electronic Components)</h1>
+        <div class="faculty-info">
+            Dr Shivkumar Math, Professor & HOD, Department of Physics<br>
+            Jain College of Engineering, Belagavi
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button id="tabL" class="tab-btn active" onclick="setComp('L')">Box ($L$)</button>
+        <button id="tabC" class="tab-btn" onclick="setComp('C')">Box ($C$)</button>
+        <button id="tabR" class="tab-btn" onclick="setComp('R')">Box ($R$)</button>
+    </div>
+
+    <div class="visual-grid">
+        <div class="canvas-box">
+            <span class="canvas-label">Circuit Diagram</span>
+            <img src="C:\Users\shivu\OneDrive\Documents\Shivuphy@outlook.in folder\OneDrive\Desktop\Simulations\Blackbox circuit diagram.jpg" 
+                 alt="Diagram" style="width: 85%; height: auto;">
+        </div>
+        <div class="canvas-box" style="background: #020617;">
+            <span class="canvas-label">Oscilloscope ($V/I$)</span>
+            <canvas id="waveCanvas"></canvas>
+        </div>
+        <div class="canvas-box" style="background: #f8fafc;">
+            <span class="canvas-label">Phasor Diagram ($R/X$)</span>
+            <canvas id="phasorCanvas"></canvas>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <div class="readouts">
+            <div class="metric">Voltage ($V$): <span id="valV" style="color: var(--success)">5.0</span> V</div>
+            <div class="metric">Current ($I$): <span id="valI" style="color: var(--i-trace)">0.00</span> mA</div>
+            <div class="metric">Impedance ($Z$): <span id="valZ" style="color: var(--accent)">1000.0</span> Ω</div>
+        </div>
+        <div>
+            <label>Frequency ($f$): <strong><span id="lblF">2250</span> Hz</strong></label>
+            <input type="range" id="freq" min="100" max="5000" step="50" value="2250" style="width:100%; margin: 10px 0;">
+            <label>Amplitude ($V_{in}$): <strong><span id="lblV">5.0</span> V</strong></label>
+            <input type="range" id="volt" min="0.1" max="10.0" step="0.1" value="5.0" style="width:100%; margin: 10px 0;">
+            <button class="btn btn-record" onclick="recordLog()">Capture Data Point</button>
+        </div>
+    </div>
+
+    <div class="graph-area"><canvas id="zGraph"></canvas></div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Extended Theory</h3>
+            The total opposition to $AC$ flow is Impedance ($Z$). This virtual lab simulates a reactive element in series with an internal resistor ($R = 1000\ \Omega$).
+            <br><br>
+            
+            <br>
+            1. <strong>Inductive Reactance:</strong> $X_L = 2\pi f L$. Impedance $Z$ increases linearly with frequency $f$. Current $I$ <strong>lags</strong> $V$.
+            <br>
+            2. <strong>Capacitive Reactance:</strong> $X_C = \frac{1}{2\pi f C}$. $Z$ decreases inversely with frequency $f$. Current $I$ <strong>leads</strong> $V$.
+            <br>
+            3. <strong>Resultant $Z$:</strong> $Z = \sqrt{R^2 + X^2}$.
+        </div>
+        <div class="info-card">
+            <h3>Procedure</h3>
+            1. Select a Black-Box ($L, C, \text{or } R$). Keep $V_{in}$ constant.<br>
+            2. Increment $f$ step-wise and use <strong>Capture Data Point</strong>.<br>
+            3. Observe the Phasor: notice how the reactance vector $X$ changes relative to $R$.<br>
+            4. Click <strong>Show Result</strong> for identification based on data trends.<br>
+            5. Generate the PDF for evaluation using <strong>Print Lab Manual</strong>.
+        </div>
+    </div>
+
+    <table id="obsTable">
+        <thead>
+            <tr><th>Component ID</th><th>$f$ (Hz)</th><th>$V$ (V)</th><th>$I$ (mA)</th><th>$Z$ (Ω)</th></tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+    </table>
+    
+    <div class="btn-group">
+        <button class="btn btn-result" onclick="showResult()">Show Result</button>
+        <button class="btn btn-print" onclick="window.print()">Print Lab Manual (PDF)</button>
+        <button class="btn btn-export" onclick="exportExcel()">Export to Excel</button>
+        <button class="btn btn-reset" onclick="resetLogs()">Clear Data</button>
+    </div>
+    
+    <div id="resultDisplay"></div>
+
+    <div class="cert-block">
+        <div class="cert-header">CERTIFICATE OF EVALUATION</div>
+        <p>Name of Student: _____________________________________ USN: ___________________</p>
+        <p>Date of Experiment: ___________________ Section/Batch: ___________________</p>
+        <p style="margin-top: 20px;"><strong>Marks Awarded:</strong> _______ / 10</p>
+        <div class="cert-row">
+            <div class="sign-line">Student Signature</div>
+            <div class="sign-line">Internal Examiner</div>
+            <div class="sign-line">HOD / Professor</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const values = { L: 0.1, C: 0.0000004, R_base: 1000 }; 
+    let activeComp = 'L';
+    let logs = [];
+    let time = 0;
+    let chart;
+
+    const fIn = document.getElementById('freq');
+    const vIn = document.getElementById('volt');
+    const c_wave = document.getElementById('waveCanvas');
+    const c_phasor = document.getElementById('phasorCanvas');
+
+    function initGraph() {
+        const ctx = document.getElementById('zGraph').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Impedance Z (Ω) vs Frequency f (Hz)', data: [], backgroundColor: '#1e40af', borderColor: '#1e40af', showLine: true, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'f (Hz)' } }, y: { title: { display: true, text: 'Z (Ω)' } } } }
+        });
+    }
+
+    function drawPhasor(R, X) {
+        const ctx = c_phasor.getContext('2d');
+        const centerX = 50, centerY = (X < 0) ? 50 : c_phasor.height - 50;
+        const scale = 0.08;
+        ctx.clearRect(0,0,c_phasor.width, c_phasor.height);
+        
+        ctx.strokeStyle = "#cbd5e1"; ctx.beginPath();
+        ctx.moveTo(centerX, centerY); ctx.lineTo(centerX + 150, centerY);
+        ctx.moveTo(centerX, centerY); ctx.lineTo(centerX, (X < 0) ? centerY + 150 : centerY - 150); ctx.stroke();
+
+        ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(centerX + (R * scale), centerY); ctx.stroke();
+        
+        ctx.strokeStyle = "#1e40af";
+        ctx.beginPath(); ctx.moveTo(centerX + (R * scale), centerY); 
+        ctx.lineTo(centerX + (R * scale), centerY - (X * scale)); ctx.stroke();
+
+        ctx.strokeStyle = "#059669"; ctx.setLineDash([5, 3]);
+        ctx.beginPath(); ctx.moveTo(centerX, centerY); 
+        ctx.lineTo(centerX + (R * scale), centerY - (X * scale)); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function animate() {
+        const ctxW = c_wave.getContext('2d');
+        ctxW.fillStyle = "rgba(2, 6, 23, 0.2)"; ctxW.fillRect(0, 0, c_wave.width, c_wave.height);
+        
+        const f = parseFloat(fIn.value), V_peak = parseFloat(vIn.value), omega = 2 * Math.PI * f;
+        let Z, phi, X = 0;
+
+        // Functional Tab Logic
+        if(activeComp === 'L') { 
+            X = omega * values.L; 
+            Z = Math.sqrt(values.R_base**2 + X**2); 
+            phi = Math.atan(X / values.R_base); 
+        } else if(activeComp === 'C') { 
+            X = - (1 / (omega * values.C)); 
+            Z = Math.sqrt(values.R_base**2 + X**2); 
+            phi = Math.atan(X / values.R_base); 
+        } else { 
+            X = 0;
+            Z = values.R_base; 
+            phi = 0; 
+        }
+        
+        const I_peak = (V_peak / Z) * 1000;
+        document.getElementById('lblF').innerText = f; document.getElementById('valI').innerText = I_peak.toFixed(2);
+        document.getElementById('valZ').innerText = Z.toFixed(1);
+
+        ctxW.beginPath(); ctxW.strokeStyle = "#00ff00"; ctxW.lineWidth = 2;
+        for(let x=0; x<c_wave.width; x++) {
+            const y = (c_wave.height/2) - Math.sin(omega * (time + x*0.000005)) * (V_peak * 10);
+            x === 0 ? ctxW.moveTo(x,y) : ctxW.lineTo(x,y);
+        } ctxW.stroke();
+
+        ctxW.beginPath(); ctxW.strokeStyle = "#00d4ff";
+        for(let x=0; x<c_wave.width; x++) {
+            const y = (c_wave.height/2) - Math.sin(omega * (time + x*0.000005) - phi) * (I_peak * 15);
+            x === 0 ? ctxW.moveTo(x,y) : ctxW.lineTo(x,y);
+        } ctxW.stroke();
+
+        drawPhasor(values.R_base, X);
+        time += 0.0001; requestAnimationFrame(animate);
+    }
+
+    // Function to handle tab switching
+    function setComp(c) { 
+        activeComp = c; 
+        // Update UI Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('tab' + c).classList.add('active');
+        resetLogs(); 
+    }
+    
+    function recordLog() {
+        const f = parseFloat(fIn.value), z = parseFloat(document.getElementById('valZ').innerText);
+        logs.push({ c: activeComp, f, v: vIn.value, i: document.getElementById('valI').innerText, z });
+        document.getElementById('logBody').innerHTML = logs.map(d => `<tr><td>Box (${d.c})</td><td>${d.f}</td><td>${d.v}</td><td>${d.i}</td><td>${d.z}</td></tr>`).join('');
+        chart.data.datasets[0].data.push({x: f, y: z}); chart.data.datasets[0].data.sort((a,b)=>a.x-b.x); chart.update();
+    }
+    
+    function showResult() {
+        if(logs.length < 2) return alert("Please capture at least 2 data points first.");
+        const first = logs[0], last = logs[logs.length-1], res = document.getElementById('resultDisplay');
+        res.style.display = "block";
+        if(last.z > first.z + 10) res.innerHTML = "RESULT: $Z$ increases with $f$. Identification: INDUCTOR ($L$).";
+        else if(last.z < first.z - 10) res.innerHTML = "RESULT: $Z$ decreases with $f$. Identification: CAPACITOR ($C$).";
+        else res.innerHTML = "RESULT: $Z$ remains constant ($Z \\approx 1000\\, \\Omega$). Identification: RESISTOR ($R$).";
+    }
+    
+    function exportExcel() {
+        let csv = "Component,f(Hz),V(V),I(mA),Z(Ohm)\n" + logs.map(d => `${d.c},${d.f},${d.v},${d.i},${d.z}`).join("\n");
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = 'LabData.csv'; a.click();
+    }
+    
+    function resetLogs() { logs = []; document.getElementById('logBody').innerHTML = ""; chart.data.datasets[0].data = []; chart.update(); document.getElementById('resultDisplay').style.display="none"; }
+    
+    window.onload = () => { 
+        c_wave.width = c_wave.offsetWidth; c_wave.height = c_wave.offsetHeight; 
+        c_phasor.width = c_phasor.offsetWidth; c_phasor.height = c_phasor.offsetHeight; 
+        initGraph(); animate(); 
+    };
+</script>
+</body>
+</html>
